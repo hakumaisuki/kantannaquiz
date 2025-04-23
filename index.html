@@ -10,7 +10,7 @@
       text-align: center;
       padding: 3rem;
     }
-    .quiz-container {
+    .quiz-container, .start-screen, .result-screen {
       background: #fff0f5;
       padding: 2rem;
       border-radius: 10px;
@@ -41,16 +41,6 @@
       margin-bottom: 1rem;
       font-size: 1.2rem;
     }
-    .fade-in { animation: fadeIn 1s ease-in; }
-    .bounce { animation: bounce 0.6s ease-in-out; }
-    @keyframes fadeIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
-    }
-    @keyframes bounce {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-10px); }
-    }
     .hidden { display: none; }
     .start-screen button, .result-screen button {
       margin-top: 40px;
@@ -61,10 +51,6 @@
       border: none;
       border-radius: 15px;
       cursor: pointer;
-    }
-    .start-screen h1, .result-screen h1 {
-      font-size: 2.5em;
-      margin-bottom: 20px;
     }
   </style>
 </head>
@@ -98,5 +84,144 @@
   <!-- 結果画面 -->
   <div id="result-screen" class="result-screen hidden">
     <h1>🎉 結果発表 🎉</h1>
-    <div class="score" id="score"></div>
-    <div class="rate" id="rate
+    <div id="score" style="font-size: 2em; color: #4caf50;"></div>
+    <div id="rate" style="font-size: 1.5em; color: #2196f3;"></div>
+    <div id="final-comment" style="font-size: 1.8em; margin-top: 30px; color: #ff69b4;"></div>
+    <button onclick="resetQuiz()">🔁 もう一度チャレンジ</button>
+  </div>
+
+  <script>
+    const quizData = [
+      { question: "日本の首都は？", answers: ["大阪", "東京", "京都"], correct: "東京", explanation: "東京は日本の首都です。" },
+      { question: "桜の開花時期は？", answers: ["12月", "3〜4月", "8月"], correct: "3〜4月", explanation: "桜は春に咲きます。" },
+      { question: "日本で一番高い山は？", answers: ["富士山", "槍ヶ岳", "北岳"], correct: "富士山", explanation: "標高3,776mです。" },
+      { question: "日本の通貨単位は？", answers: ["ウォン", "ドル", "円"], correct: "円", explanation: "日本では『円』を使います。" },
+      { question: "ひまわりの咲く季節は？", answers: ["春", "夏", "秋"], correct: "夏", explanation: "夏に咲く花です。" },
+      { question: "春の七草に含まれるのは？", answers: ["よもぎ", "せり", "カモミール"], correct: "せり", explanation: "春の七草の1つです。" },
+      { question: "4月の祝日は？", answers: ["こどもの日", "昭和の日", "敬老の日"], correct: "昭和の日", explanation: "4月29日です。" },
+      { question: "桜の英語名は？", answers: ["cherry", "plum", "peach"], correct: "cherry", explanation: "cherry blossomといいます。" },
+      { question: "たんぽぽの綿毛の目的は？", answers: ["見た目", "虫よけ", "種を飛ばすため"], correct: "種を飛ばすため", explanation: "風に乗せます。" },
+      { question: "春分の日は何を祝う？", answers: ["先祖", "働く人", "自然"], correct: "自然", explanation: "自然をたたえます。" }
+    ];
+
+    let currentIndex = 0;
+    let score = 0;
+    let timer;
+    let timeLimit = 10;
+    let shuffledQuiz = [];
+    let startTime;
+
+    function shuffle(array) {
+      return array.sort(() => Math.random() - 0.5);
+    }
+
+    function showScreen(screenId) {
+      document.getElementById("start-screen").classList.add("hidden");
+      document.getElementById("quiz-screen").classList.add("hidden");
+      document.getElementById("result-screen").classList.add("hidden");
+      document.getElementById(screenId).classList.remove("hidden");
+    }
+
+    function startQuiz() {
+      currentIndex = 0;
+      score = 0;
+      shuffledQuiz = shuffle([...quizData]);
+      startTime = Date.now();
+      showScreen("quiz-screen");
+      loadQuiz();
+    }
+
+    function startTimer() {
+      let timeLeft = timeLimit;
+      document.getElementById("timer").textContent = `⏳ ${timeLeft}秒`;
+      timer = setInterval(() => {
+        timeLeft--;
+        document.getElementById("timer").textContent = `⏳ ${timeLeft}秒`;
+        if (timeLeft <= 0) {
+          clearInterval(timer);
+          autoNext();
+        }
+      }, 1000);
+    }
+
+    function loadQuiz() {
+      clearInterval(timer);
+      const quiz = shuffledQuiz[currentIndex];
+      document.getElementById("question").textContent = `Q${currentIndex + 1}. ${quiz.question}`;
+      document.getElementById("explanation").textContent = "";
+      document.getElementById("result").textContent = "";
+
+      const buttons = document.querySelectorAll(".answer-button");
+      buttons.forEach((btn, i) => {
+        btn.textContent = quiz.answers[i];
+        btn.disabled = false;
+        btn.style.backgroundColor = "#ffb6c1";
+        btn.onclick = () => {
+          clearInterval(timer);
+          checkAnswer(btn, quiz.answers[i]);
+        };
+      });
+
+      document.getElementById("next-btn").style.display = "none";
+      startTimer();
+    }
+
+    function checkAnswer(button, selected) {
+      const quiz = shuffledQuiz[currentIndex];
+      const isCorrect = selected === quiz.correct;
+
+      if (isCorrect) {
+        score++;
+        document.getElementById("result").textContent = "✅ 正解！";
+        document.getElementById("result").style.color = "green";
+      } else {
+        document.getElementById("result").textContent = `❌ 不正解… 正解は「${quiz.correct}」`;
+        document.getElementById("result").style.color = "red";
+      }
+
+      document.getElementById("explanation").textContent = `💡 解説：${quiz.explanation}`;
+      document.getElementById("next-btn").style.display = "inline-block";
+      document.querySelectorAll(".answer-button").forEach(btn => btn.disabled = true);
+    }
+
+    function autoNext() {
+      const quiz = shuffledQuiz[currentIndex];
+      document.getElementById("result").textContent = "⌛ 時間切れ…";
+      document.getElementById("result").style.color = "gray";
+      document.getElementById("explanation").textContent = `💡 解説：${quiz.explanation}`;
+      document.getElementById("next-btn").style.display = "inline-block";
+      document.querySelectorAll(".answer-button").forEach(btn => btn.disabled = true);
+    }
+
+    function nextQuestion() {
+      currentIndex++;
+      if (currentIndex < 10) {
+        loadQuiz();
+      } else {
+        clearInterval(timer);
+        const totalTime = Math.floor((Date.now() - startTime) / 1000);
+        showResult(score, totalTime);
+      }
+    }
+
+    function showResult(score, time) {
+      showScreen("result-screen");
+      document.getElementById("score").textContent = `正解数：${score} / 10`;
+      document.getElementById("rate").textContent = `正答率：${Math.round(score * 10)}%（所要時間：${time}秒）`;
+      let comment = score === 10 ? "🌟 パーフェクト！" :
+                    score >= 7 ? "✨ ナイスチャレンジ！" :
+                    score >= 4 ? "👍 がんばったね！" :
+                    "💪 次はもっと正解しよう！";
+      document.getElementById("final-comment").textContent = comment;
+    }
+
+    function resetQuiz() {
+      showScreen("start-screen");
+    }
+
+    window.onload = () => {
+      showScreen("start-screen");
+    };
+  </script>
+</body>
+</html>
